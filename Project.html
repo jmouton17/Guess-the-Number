@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guess the Number</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700&display=swap" rel="stylesheet">
+  <style>
+    /* Background: animated gradient shift + subtle pattern */
+    @keyframes bgShift {
+      0%   { background-color: #000; }
+      50%  { background-color: #1a001f; }
+      100% { background-color: #000; }
+    }
+    body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      animation: bgShift 30s ease infinite alternate;
+      background: 
+        linear-gradient(45deg, #2c003e 25%, transparent 25%),
+        linear-gradient(-45deg, #2c003e 25%, transparent 25%),
+        #000;
+      background-size: 40px 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #ecf0f1;
+    }
+
+    /* Container styling and drop-shadow */
+    #game-container {
+      background-color: #111;
+      border: 2px solid #8e44ad;
+      border-radius: 8px;
+      padding: 20px 30px;
+      width: 320px;
+      box-shadow: 0 0 20px rgba(155,89,182,0.4);
+    }
+
+    /* Title styling with accent line and text-shadow */
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      margin-top: 0;
+      color: #9b59b6;
+      position: relative;
+      padding-bottom: 8px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    h1::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 4px;
+      background-color: #9b59b6;
+      border-radius: 2px;
+    }
+
+    label {
+      display: block;
+      margin: 15px 0 5px;
+      color: #ecf0f1;
+    }
+
+    /* Input styling with focus glow and placeholder transition */
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      border: 1px solid #8e44ad;
+      border-radius: 4px;
+      background-color: #222;
+      color: #ecf0f1;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #9b59b6;
+      box-shadow: 0 0 5px rgba(155,89,182,0.7);
+    }
+    input::placeholder {
+      color: #aaa;
+      opacity: 1;
+      transition: color 0.2s ease;
+    }
+    input:focus::placeholder {
+      color: transparent;
+    }
+
+    /* Button styling with gradient, lift and shadow */
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      border: none;
+      background: linear-gradient(135deg, #8e44ad, #5e3370);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+      background-color: #732d91;
+    }
+
+    /* Feedback text and score styling */
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+    #score {
+      margin-top: 10px;
+      text-align: center;
+      color: #bdc3c7;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scrollbar styling for modern browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #111;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #8e44ad;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <h1>🎲 Guess the Number!</h1>
+    <!-- Range inputs -->
+    <label for="min-input">Min:</label>
+    <input type="number" id="min-input" value="1" placeholder="Min value" />
+    <label for="max-input">Max:</label>
+    <input type="number" id="max-input" value="100" placeholder="Max value" />
+    <!-- Guess input -->
+    <label id="range-label" for="guess-input">Enter a number between 1 and 100:</label>
+    <input type="number" id="guess-input" placeholder="Your guess..." />
+    <button id="guess-btn">Guess</button>
+    <button id="restart-btn">Restart Game</button>
+
+    <p id="message"></p>
+    <p id="score"></p>
+  </div>
+
+  <script>
+    var secretNumber;
+    var attempts = 0;
+    var bestScore = null;
+
+    var minInput   = document.getElementById('min-input');
+    var maxInput   = document.getElementById('max-input');
+    var guessInput = document.getElementById('guess-input');
+    var guessBtn   = document.getElementById('guess-btn');
+    var restartBtn = document.getElementById('restart-btn');
+    var messagePara= document.getElementById('message');
+    var scorePara  = document.getElementById('score');
+    var rangeLabel = document.getElementById('range-label');
+
+    guessBtn.addEventListener('click', handleGuess, false);
+    minInput.addEventListener('change', resetGame, false);
+    maxInput.addEventListener('change', resetGame, false);
+    restartBtn.addEventListener('click', resetGame, false);
+
+    function getRandomNumber(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function resetGame() {
+      var min = parseInt(minInput.value, 10) || 1;
+      var max = parseInt(maxInput.value, 10) || min + 99;
+      secretNumber = getRandomNumber(min, max);
+      attempts = 0;
+      rangeLabel.textContent = 'Enter a number between ' + min + ' and ' + max + ':';
+      messagePara.textContent = 'New range set — good luck!';
+      messagePara.style.color = '#ecf0f1';
+      guessBtn.disabled = false;
+      guessInput.value = '';
+      guessInput.focus();
+      updateScore();
+    }
+
+    function handleGuess() {
+      var min = parseInt(minInput.value, 10) || 1;
+      var max = parseInt(maxInput.value, 10) || min + 99;
+      var userGuess = parseInt(guessInput.value, 10);
+      if (isNaN(userGuess) || userGuess < min || userGuess > max) {
+        messagePara.style.color = '#e74c3c';
+        messagePara.textContent = 'Please enter a number between ' + min + ' and ' + max + '.';
+        return;
+      }
+      attempts++;
+      if (userGuess === secretNumber) {
+        messagePara.style.color = '#9b59b6';
+        messagePara.textContent = 'Correct! You guessed in ' + attempts + ' try(ies).';
+        if (bestScore === null || attempts < bestScore) bestScore = attempts;
+        guessBtn.disabled = true;
+        updateScore();
+      } else if (userGuess < secretNumber) {
+        messagePara.style.color = '#f1c40f';
+        messagePara.textContent = 'Too low! Try a higher number.';
+      } else {
+        messagePara.style.color = '#f1c40f';
+        messagePara.textContent = 'Too high! Try a lower number.';
+      }
+      guessInput.value = '';
+      guessInput.focus();
+    }
+
+    function updateScore() {
+      var text = 'Attempts: ' + attempts;
+      if (bestScore !== null) text += ' | Best: ' + bestScore;
+      scorePara.textContent = text;
+    }
+
+    // Initialize game on load
+    resetGame();
+  </script>
+</body>
+</html>
